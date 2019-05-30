@@ -1,0 +1,127 @@
+#!/usr/bin/env node
+
+//核心处理命令行
+const program = require('commander')
+//渐变色输出
+const Printer = require('@darkobits/lolcatjs')
+//shell命令
+const shelljs = require('shelljs')
+//用户交互
+const inquirer = require('inquirer')
+//用户对话，转换颜色
+const chalk = require('chalk')
+//loading模块
+const ora = require('ora')
+//需要准备的末班文件
+const template = "direct:https://github.com/ZoneLabyrinth/my-spa.git"
+//专门去下载git目录
+const download = require('download-git-repo')
+//获取用户的目录
+const userHome = require('user-home')
+
+
+const input = [
+    "____            _     _   _ ",
+    "|  _ \\    __ _  | |_  | | | |",
+    "| |_) |  / _` | | __| | |_| |",
+    "|  __/  | (_| | | |_  |  _  |",
+    "|_|      \\__,_|  \\__| |_| |_|"
+
+].join('\n')
+
+program.version(Printer.default.fromString("0.0.1\n," + input), "-V,--version");
+
+// 需要cli-init文件
+// program.command('init', "初始化项目");
+
+const bindHandler = {
+    init() {
+        inquirer
+            .prompt([
+                {
+                    type: "input",
+                    message: 'project-name',
+                    name: 'dirname',
+                    default:'my-project',
+                },
+                {
+                    type: "list",
+                    message: "请选择框架",
+                    choices: ["✔ my-spa", "✔ vue", "✔ react"],
+                    name: "kind"
+                }
+            ])
+            .then(answers => {
+                // Use user feedback for... whatever!!
+                const _dirname = answers.dirname;
+
+                const _kind = answers.kind;
+                let templateURL, name;
+
+                switch (_kind) {
+                    case "✔ my-spa":
+                        templateURL = template;
+                        name = 'my-spa'
+                        break;
+                    case "✔ vue":
+                        //TODO vue模板
+                        // templateURL = 
+                        console.log("尚未开发vue模板")
+                        process.exit(1);
+                        break;
+                    case "✔ react":
+                        templateURL = "direct:https://github.com/ZoneLabyrinth/react-mobile.git"
+                        name = 'react-mobile'
+                        break;
+                }
+
+
+                if (_dirname) {
+                    const spinner = ora('Downloading template... \n');
+                    spinner.start();
+                    console.log(Printer.default.fromString(input))
+                    //创建文件夹
+                    const _projectPath = `${userHome}/Desktop/${_dirname}`
+                    shelljs.cd(`${userHome}/Desktop/`);
+                    shelljs.rm("-rf", _projectPath);
+                    shelljs.mkdir(_dirname);
+
+                    //下载项目
+                    //The repository parameter defaults to the master branch, but you can specify a branch or tag as a URL fragment like owner/name#my-branch. 
+                    //In addition to specifying the type of where to download, you can also specify a custom origin like 
+                    /**
+                     * @param {url} Direct 下载路径
+                     * @param {string} destination 目标文件名
+                     * @param {object} options 下载参数 {clone:true}使用clone 代替 http下载;其他参数(proxy,headers,filter...)
+                     * @param {function} callback 回调函数 错误处理
+                     */
+                    download(templateURL, _projectPath, { clone: true }, err => {
+                        spinner.stop();
+                        if (err) {
+                            console.error('下载失败', err.message.trim())
+                        } else {
+                            //把用户整体安装过的项目进行核心数据替换（修改package.json中name）
+                            shelljs.sed("-i", name, _dirname, _projectPath + "/package.json")
+                            console.log(chalk.green("The project was created successfully "))
+                        }
+                    })
+                }
+
+            });
+    }
+}
+
+program
+    .usage("[cmd] <options>")
+    .arguments("<cmd> [env]")
+    .action((cmd, otherParms) => {
+        const handler = bindHandler[cmd]
+        if (typeof handler === "undefined") {
+            console.log(`${chalk.red("Unknown option")} ${chalk.yellow(cmd)}，请检查输入命令🌺 \n\n`)
+            program.help()
+        } else {
+            handler(otherParms)
+        }
+    })
+
+program.parse(process.argv)
