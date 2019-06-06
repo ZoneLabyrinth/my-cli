@@ -49,16 +49,21 @@ const bindHandler = {
                     message: "请选择框架",
                     choices: ["✔ my-spa", "✔ vue", "✔ react"],
                     name: "kind"
+                },
+                {  
+                    type: "list",
+                    message: "projectPath",
+                    choices: ["✔ curren-folder", "✔ Desktop"],
+                    name: "projectDir"
                 }
             ])
             .then(answers => {
                 // Use user feedback for... whatever!!
-                const _dirname = answers.dirname;
+                const {dirname ,kind, projectDir} = answers;
 
-                const _kind = answers.kind;
-                let templateURL, name;
+                let templateURL, name, directName;
 
-                switch (_kind) {
+                switch (kind) {
                     case "✔ my-spa":
                         templateURL = template;
                         name = 'my-spa'
@@ -75,16 +80,25 @@ const bindHandler = {
                         break;
                 }
 
+                switch (projectDir) {
+                    case "✔ curren-folder":
+                        directName = shelljs.pwd().stdout
+                        break;
+                    case "✔ Desktop":
+                        directName = `${userHome}/Desktop/`
+                        break;
+                }
 
-                if (_dirname) {
+                const projectPath = `${directName}/${dirname}`
+
+                if (dirname) {
                     const spinner = ora('Downloading template... \n');
                     spinner.start();
                     console.log(Printer.default.fromString(input))
                     //创建文件夹
-                    const _projectPath = `${userHome}/Desktop/${_dirname}`
-                    shelljs.cd(`${userHome}/Desktop/`);
-                    shelljs.rm("-rf", _projectPath);
-                    shelljs.mkdir(_dirname);
+                    shelljs.cd(directName);
+                    shelljs.rm("-rf", projectPath);
+                    shelljs.mkdir(dirname);
 
                     //下载项目
                     //The repository parameter defaults to the master branch, but you can specify a branch or tag as a URL fragment like owner/name#my-branch. 
@@ -95,13 +109,13 @@ const bindHandler = {
                      * @param {object} options 下载参数 {clone:true}使用clone 代替 http下载;其他参数(proxy,headers,filter...)
                      * @param {function} callback 回调函数 错误处理
                      */
-                    download(templateURL, _projectPath, { clone: true }, err => {
+                    download(templateURL, projectPath, { clone: true }, err => {
                         spinner.stop();
                         if (err) {
                             console.error('下载失败', err.message.trim())
                         } else {
                             //把用户整体安装过的项目进行核心数据替换（修改package.json中name）
-                            shelljs.sed("-i", name, _dirname, _projectPath + "/package.json")
+                            shelljs.sed("-i", name, dirname, projectPath + "/package.json")
                             console.log(chalk.green("The project was created successfully "))
                         }
                     })
